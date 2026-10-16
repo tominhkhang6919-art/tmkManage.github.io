@@ -40,6 +40,31 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   updated_at       TIMESTAMPTZ
 );
 
+-- Bring forward tables that were created with an older, partial schema.
+ALTER TABLE public.transactions
+  ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'other',
+  ADD COLUMN IF NOT EXISTS reason TEXT,
+  ADD COLUMN IF NOT EXISTS transaction_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  ADD COLUMN IF NOT EXISTS region TEXT NOT NULL DEFAULT 'VN',
+  ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'VND',
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'transactions'
+      AND column_name = 'description'
+  ) THEN
+    EXECUTE 'UPDATE public.transactions
+             SET reason = description
+             WHERE reason IS NULL AND description IS NOT NULL';
+  END IF;
+END;
+$$;
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_tx_user_id          ON public.transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_tx_date             ON public.transactions(transaction_date DESC);
@@ -72,6 +97,26 @@ ALTER TABLE public.profiles      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
+-- Make this setup script safe to re-run while updating policies.
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Admin can view all profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admin can update all profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admin can delete profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Users can view own transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Users can insert own transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Users can update own transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Users can delete own transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Admin can view all transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Admin can update all transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Admin can delete all transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Users can view own notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Users can update own notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Admin can insert notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Admin can view all notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Admin can delete notifications" ON public.notifications;
+
 -- ── PROFILES policies ──────────────────────────────────────────
 
 -- Người dùng chỉ xem được profile của chính mình
@@ -92,35 +137,17 @@ CREATE POLICY "Users can insert own profile"
 -- Admin (email cụ thể) có thể xem TẤT CẢ profiles
 CREATE POLICY "Admin can view all profiles"
   ON public.profiles FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE id = auth.uid()
-        AND email = 'tominhkhang6919@gmail.com'
-    )
-  );
+  USING ((auth.jwt() ->> 'email') = 'tominhkhang6919@gmail.com');
 
 -- Admin có thể cập nhật TẤT CẢ profiles (block, unblock, ...)
 CREATE POLICY "Admin can update all profiles"
   ON public.profiles FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE id = auth.uid()
-        AND email = 'tominhkhang6919@gmail.com'
-    )
-  );
+  USING ((auth.jwt() ->> 'email') = 'tominhkhang6919@gmail.com');
 
 -- Admin có thể xóa profiles
 CREATE POLICY "Admin can delete profiles"
   ON public.profiles FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE id = auth.uid()
-        AND email = 'tominhkhang6919@gmail.com'
-    )
-  );
+  USING ((auth.jwt() ->> 'email') = 'tominhkhang6919@gmail.com');
 
 -- ── TRANSACTIONS policies ──────────────────────────────────────
 
@@ -147,35 +174,17 @@ CREATE POLICY "Users can delete own transactions"
 -- Admin có thể xem TẤT CẢ giao dịch
 CREATE POLICY "Admin can view all transactions"
   ON public.transactions FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE id = auth.uid()
-        AND email = 'tominhkhang6919@gmail.com'
-    )
-  );
+  USING ((auth.jwt() ->> 'email') = 'tominhkhang6919@gmail.com');
 
 -- Admin có thể sửa TẤT CẢ giao dịch
 CREATE POLICY "Admin can update all transactions"
   ON public.transactions FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE id = auth.uid()
-        AND email = 'tominhkhang6919@gmail.com'
-    )
-  );
+  USING ((auth.jwt() ->> 'email') = 'tominhkhang6919@gmail.com');
 
 -- Admin có thể xóa TẤT CẢ giao dịch
 CREATE POLICY "Admin can delete all transactions"
   ON public.transactions FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE id = auth.uid()
-        AND email = 'tominhkhang6919@gmail.com'
-    )
-  );
+  USING ((auth.jwt() ->> 'email') = 'tominhkhang6919@gmail.com');
 
 -- ── NOTIFICATIONS policies ─────────────────────────────────────
 
@@ -192,43 +201,52 @@ CREATE POLICY "Users can update own notifications"
 -- Admin (và service role) có thể ghi thông báo cho bất kỳ user nào
 CREATE POLICY "Admin can insert notifications"
   ON public.notifications FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE id = auth.uid()
-        AND email = 'tominhkhang6919@gmail.com'
-    )
-  );
+  WITH CHECK ((auth.jwt() ->> 'email') = 'tominhkhang6919@gmail.com');
 
 -- Admin có thể xem tất cả thông báo
 CREATE POLICY "Admin can view all notifications"
   ON public.notifications FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE id = auth.uid()
-        AND email = 'tominhkhang6919@gmail.com'
-    )
-  );
+  USING ((auth.jwt() ->> 'email') = 'tominhkhang6919@gmail.com');
 
 -- Admin có thể xóa thông báo
 CREATE POLICY "Admin can delete notifications"
   ON public.notifications FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM auth.users
-      WHERE id = auth.uid()
-        AND email = 'tominhkhang6919@gmail.com'
-    )
-  );
+  USING ((auth.jwt() ->> 'email') = 'tominhkhang6919@gmail.com');
 
 -- ================================================================
 -- REALTIME SUBSCRIPTIONS
 -- Bật realtime cho các bảng cần theo dõi
 -- ================================================================
-ALTER PUBLICATION supabase_realtime ADD TABLE public.transactions;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'transactions'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.transactions;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'notifications'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'profiles'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+  END IF;
+END;
+$$;
 
 
 -- ================================================================

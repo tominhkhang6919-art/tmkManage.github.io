@@ -55,7 +55,11 @@ async function init() {
     subscribeRealtime();
   } catch (error) {
     console.error('[Dashboard] Initialization failed:', error);
-    showToast('Không thể khởi tạo ứng dụng: ' + (error.message || 'Lỗi kết nối Supabase.'), 'error');
+    const schemaIsIncomplete = ['PGRST205', 'PGRST204', '42703'].includes(error.code);
+    const message = schemaIsIncomplete
+      ? 'Schema Supabase chưa đầy đủ. Hãy chạy toàn bộ supabase_schema.sql trong SQL Editor rồi tải lại trang.'
+      : 'Không thể khởi tạo ứng dụng: ' + (error.message || 'Lỗi kết nối Supabase.');
+    showToast(message, 'error');
   } finally {
     hidePageLoader();
   }

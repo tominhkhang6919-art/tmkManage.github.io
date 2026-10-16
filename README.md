@@ -19,7 +19,7 @@ Manage_money/
 
 ## Cấu hình Supabase
 
-1. Trong Supabase, mở **SQL Editor**, chạy `supabase_schema.sql` để tạo các bảng và chính sách RLS.
+1. Trong Supabase, mở **SQL Editor**, chạy toàn bộ `supabase_schema.sql` để tạo các bảng và chính sách RLS. Có thể chạy lại script an toàn khi dự án đã có một phần schema; script bổ sung các cột còn thiếu trên `transactions` và giữ lại dữ liệu hiện có.
 2. Vào **Authentication → Sign In / Providers** và bật **Anonymous Sign-Ins**. Ứng dụng cần nhà cung cấp này để tự tạo phiên an toàn mà không hiện màn hình đăng nhập.
 3. Mở **Project Settings → API** và xác nhận URL cùng anon/public key trong `js/supabaseClient.js` khớp với dự án.
 
