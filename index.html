@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TMK – Manage Money</title>
+  <meta name="description" content="Quản lý thu chi cá nhân thông minh" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="intro-screen" role="presentation" aria-hidden="true">
+    <div class="intro-bg-money" id="intro-bills"></div>
+    <div class="intro-logo">
+      <div class="intro-tmk">TMK</div>
+      <div class="intro-tagline">💰 Manage Money</div>
+      <div class="intro-sub">Save Yourself – Quản Lý Thu Chi</div>
+      <div class="intro-progress">
+        <div class="intro-progress-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const container = document.getElementById('intro-bills');
+    const bills = ['💵', '💴', '💶', '💷', '💰', '🪙', '💳', '💸'];
+    for (let i = 0; i < 18; i++) {
+      const bill = document.createElement('span');
+      bill.className = 'money-bill';
+      bill.textContent = bills[Math.floor(Math.random() * bills.length)];
+      bill.style.left = `${Math.random() * 100}vw`;
+      bill.style.animationDelay = `${Math.random() * 6}s`;
+      bill.style.animationDuration = `${6 + Math.random() * 8}s`;
+      bill.style.fontSize = `${1.5 + Math.random() * 2}rem`;
+      container.appendChild(bill);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const intro = document.getElementById('intro-screen');
+      window.setTimeout(() => {
+        intro.classList.add('exit');
+        window.setTimeout(() => window.location.replace('dashboard.html'), 700);
+      }, 4000);
+    });
+  </script>
+</body>
+</html>
