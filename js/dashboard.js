@@ -1122,6 +1122,20 @@ function renderAvatarWithValue(value) {
    PHẦN 12: GẮNG SỰ KIỆN (EVENT BINDING)
    ══════════════════════════════════════════════════════════════ */
 
+function setAmountInputDigits(input, digits, digitsBeforeCaret) {
+  const formatted = formatNumberInput(digits);
+  input.value = formatted;
+
+  let caret = 0;
+  let digitsPassed = 0;
+  while (caret < formatted.length && digitsPassed < digitsBeforeCaret) {
+    if (/\d/.test(formatted[caret])) digitsPassed++;
+    caret++;
+  }
+
+  input.setSelectionRange(caret, caret);
+}
+
 /**
  * bindEvents()
  * Gắn tất cả event listeners lên các element DOM.
@@ -1133,13 +1147,31 @@ function bindEvents() {
 
   // ── Format số tiền khi nhập ──
   document.querySelectorAll('.input-amount').forEach(inp => {
+    inp.addEventListener('keydown', function (event) {
+      if ((event.key !== 'Backspace' && event.key !== 'Delete') ||
+          this.selectionStart !== this.selectionEnd) return;
+
+      const caret = this.selectionStart;
+      const value = this.value;
+      const separatorBeforeCaret = event.key === 'Backspace' && value[caret - 1] === '.';
+      const separatorAtCaret = event.key === 'Delete' && value[caret] === '.';
+      if (!separatorBeforeCaret && !separatorAtCaret) return;
+
+      event.preventDefault();
+      const digits = value.replace(/\D/g, '');
+      const digitsBeforeCaret = value.slice(0, separatorBeforeCaret ? caret - 1 : caret).replace(/\D/g, '').length;
+      const digitIndex = separatorBeforeCaret ? digitsBeforeCaret - 1 : digitsBeforeCaret;
+      if (digitIndex < 0 || digitIndex >= digits.length) return;
+
+      const updatedDigits = digits.slice(0, digitIndex) + digits.slice(digitIndex + 1);
+      setAmountInputDigits(this, updatedDigits, digitIndex);
+    });
+
     inp.addEventListener('input', function () {
-      const pos   = this.selectionStart;
-      const raw   = this.value.replace(/\./g, '');
-      const fmt   = formatNumberInput(raw);
-      this.value  = fmt;
-      // Giữ con trỏ đúng vị trí
-      try { this.setSelectionRange(pos, pos); } catch {}
+      const caret = this.selectionStart ?? this.value.length;
+      const digitsBeforeCaret = this.value.slice(0, caret).replace(/\D/g, '').length;
+      const digits = this.value.replace(/\D/g, '');
+      setAmountInputDigits(this, digits, digitsBeforeCaret);
     });
   });
 
