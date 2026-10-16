@@ -76,12 +76,12 @@
     /* Responsive balance section */
     @media (max-width: 900px) {
       .balance-section {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
       }
       .profile-card {
         flex-direction: row;
         justify-content: flex-start;
-        min-width: unset;
+        min-width: 0;
       }
     }
 

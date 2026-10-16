@@ -499,42 +499,46 @@ async function addTransaction(type) {
     amount,
     category,
     reason: reason || getCategoryLabel(category, type),
+    description: reason || getCategoryLabel(category, type),
     transaction_date: dateVal,
     region: State.region,
     currency: region.currency,
   };
-  let data;
-  let error;
-  if (isLocalStorageMode()) {
-    data = saveLocalTransaction(transaction);
-  } else {
-    const result = await db
-      .from(TABLES.TRANSACTIONS)
-      .insert([transaction])
-      .select()
-      .single();
-    data = result.data;
-    error = result.error;
-  }
+  try {
+    let data;
+    if (isLocalStorageMode()) {
+      data = saveLocalTransaction(transaction);
+    } else {
+      const result = await db
+        .from(TABLES.TRANSACTIONS)
+        .insert([transaction])
+        .select()
+        .single();
+      if (result.error) throw result.error;
+      data = result.data;
+    }
 
-  setLoading(btn, false);
+    // ── Cập nhật State và UI ──
+    State.transactions.unshift(data);
+    applyFiltersAndSort();
+    renderBalance();
+    renderSummary();
 
-  if (error) {
-    showToast('Lỗi vui lòng thực hiện lại', 'error');
+    // ── Reset form ──
+    resetForm(type);
+
+    showToast('Hoàn Thành', 'success');
+  } catch (error) {
     console.error('[addTransaction]', error);
-    return;
+    const legacyDescriptionRequired =
+      error.code === '23502' && /description/i.test(error.message || '');
+    const message = legacyDescriptionRequired
+      ? 'Cơ sở dữ liệu còn yêu cầu cột description. Chạy lại supabase_schema.sql trong Supabase rồi thử lại.'
+      : 'Không thể lưu giao dịch: ' + (error.message || 'Lỗi kết nối Supabase.');
+    showToast(message, 'error');
+  } finally {
+    setLoading(btn, false);
   }
-
-  // ── Cập nhật State và UI ──
-  State.transactions.unshift(data);
-  applyFiltersAndSort();
-  renderBalance();
-  renderSummary();
-
-  // ── Reset form ──
-  resetForm(type);
-
-  showToast('Hoàn Thành', 'success');
 }
 
 /**
@@ -617,6 +621,7 @@ async function saveEdit() {
     amount,
     category,
     reason: reason || getCategoryLabel(category, type),
+    description: reason || getCategoryLabel(category, type),
     transaction_date: dateVal,
   };
   let data;

@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
 ALTER TABLE public.transactions
   ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'other',
   ADD COLUMN IF NOT EXISTS reason TEXT,
+  ADD COLUMN IF NOT EXISTS description TEXT,
   ADD COLUMN IF NOT EXISTS transaction_date DATE NOT NULL DEFAULT CURRENT_DATE,
   ADD COLUMN IF NOT EXISTS region TEXT NOT NULL DEFAULT 'VN',
   ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'VND',
@@ -61,6 +62,20 @@ BEGIN
     EXECUTE 'UPDATE public.transactions
              SET reason = description
              WHERE reason IS NULL AND description IS NOT NULL';
+  END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'transactions'
+      AND column_name = 'description'
+  ) THEN
+    ALTER TABLE public.transactions ALTER COLUMN description DROP NOT NULL;
   END IF;
 END;
 $$;

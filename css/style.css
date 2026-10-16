@@ -760,6 +760,7 @@ select.form-control { cursor: pointer; }
 /* ── 15. Dashboard Layout ── */
 .app-layout {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr;
   min-height: 100vh;
 }
@@ -772,6 +773,7 @@ select.form-control { cursor: pointer; }
   padding: 0 var(--sp-xl);
   height: 64px;
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   position: sticky;
@@ -783,11 +785,13 @@ select.form-control { cursor: pointer; }
 .nav-brand {
   display: flex;
   align-items: center;
+  min-width: 0;
   gap: var(--sp-sm);
   font-size: 1.25rem;
   font-weight: 800;
   color: var(--primary-600);
 }
+.nav-brand span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-brand-icon {
   width: 36px; height: 36px;
   background: var(--grad-hero);
@@ -853,6 +857,7 @@ select.form-control { cursor: pointer; }
   padding: var(--sp-xl);
   max-width: 1280px;
   margin: 0 auto;
+  min-width: 0;
   width: 100%;
 }
 
@@ -869,6 +874,7 @@ select.form-control { cursor: pointer; }
   background: var(--grad-hero);
   border-radius: calc(var(--border-radius) * 1.5);
   padding: var(--sp-xl);
+  min-width: 0;
   color: #fff;
   position: relative;
   overflow: hidden;
@@ -968,7 +974,7 @@ select.form-control { cursor: pointer; }
   gap: var(--sp-sm);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-color);
-  min-width: 160px;
+  min-width: 0;
   text-align: center;
   position: relative;
 }
@@ -1606,8 +1612,8 @@ select.form-control { cursor: pointer; }
 @media (max-width: 1024px) {
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
   .summary-grid { grid-template-columns: 1fr 1fr; }
-  .balance-section { grid-template-columns: 1fr; }
-  .profile-card { flex-direction: row; min-width: unset; padding: var(--sp-md) var(--sp-lg); }
+  .balance-section { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+  .profile-card { flex-direction: row; min-width: 0; padding: var(--sp-md) var(--sp-lg); }
 }
 
 @media (max-width: 768px) {
@@ -1617,6 +1623,7 @@ select.form-control { cursor: pointer; }
   .admin-layout { grid-template-columns: 1fr; }
   .admin-sidebar { display: none; }
   .top-nav { padding: 0 var(--sp-md); }
+  .transaction-actions { opacity: 1; }
   .detail-controls { flex-direction: column; align-items: flex-start; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
 }
@@ -1624,6 +1631,15 @@ select.form-control { cursor: pointer; }
 @media (max-width: 480px) {
   .stat-grid { grid-template-columns: 1fr; }
   .balance-stats { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 360px) {
+  .transaction-item { flex-wrap: wrap; gap: var(--sp-sm); padding: 10px 12px; }
+  .transaction-icon { width: 32px; height: 32px; }
+  .transaction-info { flex: 1 1 70px; }
+  .transaction-amount { font-size: .85rem; }
+  .transaction-actions { flex: 0 0 100%; justify-content: flex-end; }
+  .transaction-actions .btn-icon { width: 32px; height: 32px; }
 }
 
 /* ── 27. Avatar Upload Picker ── */
