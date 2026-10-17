@@ -1129,24 +1129,25 @@ function renderAvatarWithValue(value) {
    PHẦN 12: GẮNG SỰ KIỆN (EVENT BINDING)
    ══════════════════════════════════════════════════════════════ */
 
+// Hàm đặt lại giá trị và giữ đúng vị trí con trỏ
 function setAmountInputDigits(input, digits, digitsBeforeCaret) {
-  const formatted = formatNumberInput(digits);
+  // Hàm formatNumberInput của bạn (mình để ví dụ mặc định định dạng 1,000,000)
+  const formatted = typeof formatNumberInput === 'function' 
+    ? formatNumberInput(digits) 
+    : digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    
   input.value = formatted;
 
   let caret = 0;
   let digitsPassed = 0;
+  
+  // Tính toán lại vị trí con trỏ sau khi chuỗi đã được thêm các dấu phẩy
   while (caret < formatted.length && digitsPassed < digitsBeforeCaret) {
     if (/\d/.test(formatted[caret])) digitsPassed++;
     caret++;
   }
 
   input.setSelectionRange(caret, caret);
-}
-
-function replaceAmountInputDigits(input, start, end, insertedDigits = '') {
-  const digits = input.value.replace(/\D/g, '');
-  const updatedDigits = digits.slice(0, start) + insertedDigits + digits.slice(end);
-  setAmountInputDigits(input, updatedDigits, start + insertedDigits.length);
 }
 
 /**
@@ -1159,59 +1160,21 @@ function bindEvents() {
   document.getElementById('btn-add-expense')?.addEventListener('click', () => addTransaction('expense'));
 
   // ── Format số tiền khi nhập ──
-  document.querySelectorAll('.input-amount').forEach(inp => {
-    inp.addEventListener('beforeinput', function (event) {
-      if (event.isComposing) return;
-
-      const inputType = event.inputType || '';
-      const isBackwardDelete = inputType === 'deleteContentBackward';
-      const isForwardDelete = inputType === 'deleteContentForward';
-      const isInsertion = inputType === 'insertText' || inputType === 'insertReplacementText';
-      if (!isBackwardDelete && !isForwardDelete && !isInsertion) return;
-
-      event.preventDefault();
-
-      const value = this.value;
-      const selectionStart = this.selectionStart ?? value.length;
-      const selectionEnd = this.selectionEnd ?? selectionStart;
-      let start = value.slice(0, selectionStart).replace(/\D/g, '').length;
-      let end = value.slice(0, selectionEnd).replace(/\D/g, '').length;
-      let insertedDigits = '';
-
-      if (selectionStart === selectionEnd && isBackwardDelete) {
-        if (start === 0) return;
-        start--;
-      } else if (selectionStart === selectionEnd && isForwardDelete) {
-        if (end >= value.replace(/\D/g, '').length) return;
-        end++;
-      } else if (isInsertion) {
-        insertedDigits = (event.data || '').replace(/\D/g, '');
-        if (!insertedDigits) return;
-      }
-
-      replaceAmountInputDigits(this, start, end, insertedDigits);
-    });
-
-    inp.addEventListener('paste', function (event) {
-      event.preventDefault();
-      const pastedDigits = (event.clipboardData?.getData('text') || '').replace(/\D/g, '');
-      if (!pastedDigits) return;
-
-      const value = this.value;
-      const selectionStart = this.selectionStart ?? value.length;
-      const selectionEnd = this.selectionEnd ?? selectionStart;
-      const start = value.slice(0, selectionStart).replace(/\D/g, '').length;
-      const end = value.slice(0, selectionEnd).replace(/\D/g, '').length;
-      replaceAmountInputDigits(this, start, end, pastedDigits);
-    });
-
-    inp.addEventListener('input', function () {
-      const caret = this.selectionStart ?? this.value.length;
-      const digitsBeforeCaret = this.value.slice(0, caret).replace(/\D/g, '').length;
-      const digits = this.value.replace(/\D/g, '');
-      setAmountInputDigits(this, digits, digitsBeforeCaret);
-    });
+  ddocument.querySelectorAll('.input-amount').forEach(inp => {
+  inp.addEventListener('input', function () {
+    // 1. Lấy vị trí con trỏ hiện tại ngay sau khi trình duyệt thay đổi value
+    const caret = this.selectionStart ?? this.value.length;
+    
+    // 2. Đếm số lượng chữ số nằm trước con trỏ
+    const digitsBeforeCaret = this.value.slice(0, caret).replace(/\D/g, '').length;
+    
+    // 3. Lấy toàn bộ chữ số có trong ô input
+    const digits = this.value.replace(/\D/g, '');
+    
+    // 4. Gọi hàm định dạng lại và khôi phục vị trí con trỏ
+    setAmountInputDigits(this, digits, digitsBeforeCaret);
   });
+});
 
   // ── Tự điền ngày hôm nay ──
   document.querySelectorAll('.input-date').forEach(inp => {
