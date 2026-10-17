@@ -1160,7 +1160,7 @@ function bindEvents() {
   document.getElementById('btn-add-expense')?.addEventListener('click', () => addTransaction('expense'));
 
   // ── Format số tiền khi nhập ──
-  ddocument.querySelectorAll('.input-amount').forEach(inp => {
+  document.querySelectorAll('.input-amount').forEach(inp => {
   inp.addEventListener('input', function () {
     // 1. Lấy vị trí con trỏ hiện tại ngay sau khi trình duyệt thay đổi value
     const caret = this.selectionStart ?? this.value.length;
