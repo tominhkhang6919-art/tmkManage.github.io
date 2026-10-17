@@ -36,7 +36,13 @@ const State = {
 /* ══════════════════════════════════════════════════════════════
    PHẦN 1: KHỞI TẠO
    ══════════════════════════════════════════════════════════════ */
+const db = window.db;
 
+if (!db) {
+  throw new Error(
+    'db chưa được khởi tạo. Kiểm tra js/supabaseClient.js'
+  );
+}
 /**
  * init()
  * Điểm vào (entry point) của dashboard.

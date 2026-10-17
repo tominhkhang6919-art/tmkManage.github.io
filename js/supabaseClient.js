@@ -16,18 +16,35 @@
  *  - autoRefreshToken: true → tự gia hạn token trước khi hết hạn
  *  - detectSessionInUrl: true → xử lý OAuth redirect (Google / GitHub)
  */
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storageKey: 'manage-money-auth',
-  },
-  // Realtime: bật channel để nhận thông báo real-time từ server
-  realtime: {
-    params: { eventsPerSecond: 10 },
-  },
-});
+
+if (!window.supabase) {
+  throw new Error(
+    'Không tải được thư viện Supabase. Hãy kiểm tra CDN.'
+  );
+}
+
+// Tạo một Supabase client dùng chung cho toàn ứng dụng
+if (!window.db) {
+  window.db = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storageKey: 'manage-money-auth',
+      },
+      realtime: {
+        params: { eventsPerSecond: 10 },
+      },
+    }
+  );
+}
+
+// Giữ biến db để những đoạn code trong file này tiếp tục sử dụng được
+const db = window.db;
+
 
 /* ── Kiểm tra kết nối (debug) ──────────────────────────────────
    Ghi log khi môi trường là development.
