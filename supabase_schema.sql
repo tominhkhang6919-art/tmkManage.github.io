@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   transaction_date DATE NOT NULL DEFAULT CURRENT_DATE,                  -- Ngày giao dịch
   region           TEXT NOT NULL DEFAULT 'VN',                          -- Khu vực tiền tệ
   currency         TEXT NOT NULL DEFAULT 'VND',                         -- Đơn vị tiền tệ
+  local_id         TEXT,                                                 -- ID cục bộ dùng đồng bộ an toàn
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMPTZ
 );
@@ -48,6 +49,7 @@ ALTER TABLE public.transactions
   ADD COLUMN IF NOT EXISTS transaction_date DATE NOT NULL DEFAULT CURRENT_DATE,
   ADD COLUMN IF NOT EXISTS region TEXT NOT NULL DEFAULT 'VN',
   ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'VND',
+  ADD COLUMN IF NOT EXISTS local_id TEXT,
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
 
 DO $$
@@ -85,6 +87,7 @@ CREATE INDEX IF NOT EXISTS idx_tx_user_id          ON public.transactions(user_i
 CREATE INDEX IF NOT EXISTS idx_tx_date             ON public.transactions(transaction_date DESC);
 CREATE INDEX IF NOT EXISTS idx_tx_type             ON public.transactions(type);
 CREATE INDEX IF NOT EXISTS idx_tx_user_date        ON public.transactions(user_id, transaction_date DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tx_user_local_id ON public.transactions(user_id, local_id);
 
 -- ── 3. Bảng NOTIFICATIONS (thông báo real-time) ───────────────
 CREATE TABLE IF NOT EXISTS public.notifications (

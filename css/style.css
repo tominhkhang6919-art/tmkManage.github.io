@@ -1631,6 +1631,7 @@ select.form-control { cursor: pointer; }
 @media (max-width: 480px) {
   .stat-grid { grid-template-columns: 1fr; }
   .balance-stats { grid-template-columns: 1fr; }
+  .nav-brand span { transform: translateY(-2px); }
 }
 
 @media (max-width: 360px) {

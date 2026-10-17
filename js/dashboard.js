@@ -55,7 +55,7 @@ async function init() {
     subscribeRealtime();
   } catch (error) {
     console.error('[Dashboard] Initialization failed:', error);
-    const schemaIsIncomplete = ['PGRST205', 'PGRST204', '42703'].includes(error.code);
+    const schemaIsIncomplete = ['PGRST205', 'PGRST204', '42703', '42P10'].includes(error.code);
     const message = schemaIsIncomplete
       ? 'Schema Supabase chưa đầy đủ. Hãy chạy toàn bộ supabase_schema.sql trong SQL Editor rồi tải lại trang.'
       : 'Không thể khởi tạo ứng dụng: ' + (error.message || 'Lỗi kết nối Supabase.');
@@ -519,7 +519,9 @@ async function addTransaction(type) {
     }
 
     // ── Cập nhật State và UI ──
-    State.transactions.unshift(data);
+    if (!State.transactions.some(transactionItem => transactionItem.id === data.id)) {
+      State.transactions.unshift(data);
+    }
     applyFiltersAndSort();
     renderBalance();
     renderSummary();
@@ -1141,6 +1143,12 @@ function setAmountInputDigits(input, digits, digitsBeforeCaret) {
   input.setSelectionRange(caret, caret);
 }
 
+function replaceAmountInputDigits(input, start, end, insertedDigits = '') {
+  const digits = input.value.replace(/\D/g, '');
+  const updatedDigits = digits.slice(0, start) + insertedDigits + digits.slice(end);
+  setAmountInputDigits(input, updatedDigits, start + insertedDigits.length);
+}
+
 /**
  * bindEvents()
  * Gắn tất cả event listeners lên các element DOM.
@@ -1152,24 +1160,49 @@ function bindEvents() {
 
   // ── Format số tiền khi nhập ──
   document.querySelectorAll('.input-amount').forEach(inp => {
-    inp.addEventListener('keydown', function (event) {
-      if ((event.key !== 'Backspace' && event.key !== 'Delete') ||
-          this.selectionStart !== this.selectionEnd) return;
+    inp.addEventListener('beforeinput', function (event) {
+      if (event.isComposing) return;
 
-      const caret = this.selectionStart;
-      const value = this.value;
-      const separatorBeforeCaret = event.key === 'Backspace' && value[caret - 1] === '.';
-      const separatorAtCaret = event.key === 'Delete' && value[caret] === '.';
-      if (!separatorBeforeCaret && !separatorAtCaret) return;
+      const inputType = event.inputType || '';
+      const isBackwardDelete = inputType === 'deleteContentBackward';
+      const isForwardDelete = inputType === 'deleteContentForward';
+      const isInsertion = inputType === 'insertText' || inputType === 'insertReplacementText';
+      if (!isBackwardDelete && !isForwardDelete && !isInsertion) return;
 
       event.preventDefault();
-      const digits = value.replace(/\D/g, '');
-      const digitsBeforeCaret = value.slice(0, separatorBeforeCaret ? caret - 1 : caret).replace(/\D/g, '').length;
-      const digitIndex = separatorBeforeCaret ? digitsBeforeCaret - 1 : digitsBeforeCaret;
-      if (digitIndex < 0 || digitIndex >= digits.length) return;
 
-      const updatedDigits = digits.slice(0, digitIndex) + digits.slice(digitIndex + 1);
-      setAmountInputDigits(this, updatedDigits, digitIndex);
+      const value = this.value;
+      const selectionStart = this.selectionStart ?? value.length;
+      const selectionEnd = this.selectionEnd ?? selectionStart;
+      let start = value.slice(0, selectionStart).replace(/\D/g, '').length;
+      let end = value.slice(0, selectionEnd).replace(/\D/g, '').length;
+      let insertedDigits = '';
+
+      if (selectionStart === selectionEnd && isBackwardDelete) {
+        if (start === 0) return;
+        start--;
+      } else if (selectionStart === selectionEnd && isForwardDelete) {
+        if (end >= value.replace(/\D/g, '').length) return;
+        end++;
+      } else if (isInsertion) {
+        insertedDigits = (event.data || '').replace(/\D/g, '');
+        if (!insertedDigits) return;
+      }
+
+      replaceAmountInputDigits(this, start, end, insertedDigits);
+    });
+
+    inp.addEventListener('paste', function (event) {
+      event.preventDefault();
+      const pastedDigits = (event.clipboardData?.getData('text') || '').replace(/\D/g, '');
+      if (!pastedDigits) return;
+
+      const value = this.value;
+      const selectionStart = this.selectionStart ?? value.length;
+      const selectionEnd = this.selectionEnd ?? selectionStart;
+      const start = value.slice(0, selectionStart).replace(/\D/g, '').length;
+      const end = value.slice(0, selectionEnd).replace(/\D/g, '').length;
+      replaceAmountInputDigits(this, start, end, pastedDigits);
     });
 
     inp.addEventListener('input', function () {

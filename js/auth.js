@@ -142,14 +142,7 @@ function setLoading(btnEl, isLoading, text = '') {
  */
 async function getOrCreateSessionUser() {
   const savedLocalData = localStorage.getItem(LOCAL_DATA_KEY);
-  if (savedLocalData) {
-    const localData = readLocalData();
-    if (localData.userId) {
-      localStorageMode = true;
-      showToast('Đang dùng dữ liệu đã lưu trên trình duyệt này; dữ liệu chưa đồng bộ lên Supabase.', 'warning');
-      return { id: localData.userId, user_metadata: {} };
-    }
-  }
+  const localData = savedLocalData ? readLocalData() : null;
 
   const { data, error } = await db.auth.getSession();
   if (error) throw error;
@@ -164,14 +157,19 @@ async function getOrCreateSessionUser() {
       if (!anonymousAuthDisabled) throw signInError;
 
       localStorageMode = true;
-      const localData = readLocalData();
-      if (!localData.userId) {
-        localData.userId = createLocalId();
-        writeLocalData(localData);
+      const fallbackData = localData || readLocalData();
+      if (!fallbackData.userId) {
+        fallbackData.userId = createLocalId();
+        writeLocalData(fallbackData);
       }
       console.warn('[Auth] Anonymous Sign-Ins are disabled; using browser storage.');
-      showToast('Đang lưu dữ liệu trên trình duyệt. Bật Anonymous Sign-Ins trong Supabase để đồng bộ đám mây.', 'warning');
-      return { id: localData.userId, user_metadata: {} };
+      showToast(
+        localData
+          ? 'Đang dùng dữ liệu chưa đồng bộ trên trình duyệt. Bật Anonymous Sign-Ins để chuyển dữ liệu lên Supabase.'
+          : 'Đang lưu dữ liệu trên trình duyệt. Bật Anonymous Sign-Ins trong Supabase để đồng bộ đám mây.',
+        'warning'
+      );
+      return { id: fallbackData.userId, user_metadata: {} };
     }
     user = anonymousData.user;
   }
@@ -180,11 +178,14 @@ async function getOrCreateSessionUser() {
     throw new Error('Supabase không trả về thông tin phiên người dùng.');
   }
 
-  await upsertProfile(user);
+  await upsertProfile(user, localData?.profile);
+  if (localData) {
+    await syncLocalDataToSupabase(user, localData);
+  }
   return user;
 }
 
-async function upsertProfile(user) {
+async function upsertProfile(user, profile = {}) {
   if (localStorageMode) return;
 
   const { error } = await db
@@ -193,6 +194,7 @@ async function upsertProfile(user) {
       {
         id: user.id,
         email: user.email || null,
+        ...profile,
         last_seen: new Date().toISOString(),
       },
       { onConflict: 'id' }
@@ -202,6 +204,36 @@ async function upsertProfile(user) {
     console.error('[upsertProfile] Error:', error.message);
     throw error;
   }
+}
+
+async function syncLocalDataToSupabase(user, localData) {
+  const transactions = localData.transactions.map(transaction => ({
+    user_id: user.id,
+    local_id: transaction.id,
+    type: transaction.type,
+    amount: transaction.amount,
+    category: transaction.category || 'other',
+    reason: transaction.reason || transaction.description || null,
+    description: transaction.description || transaction.reason || null,
+    transaction_date: transaction.transaction_date,
+    region: transaction.region || localData.profile.region || 'VN',
+    currency: transaction.currency || REGIONS[transaction.region || localData.profile.region || 'VN']?.currency || 'VND',
+    created_at: transaction.created_at,
+    updated_at: transaction.updated_at,
+  }));
+
+  for (let index = 0; index < transactions.length; index += 500) {
+    const { error } = await db
+      .from(TABLES.TRANSACTIONS)
+      .upsert(transactions.slice(index, index + 500), { onConflict: 'user_id,local_id' });
+    if (error) {
+      console.error('[syncLocalDataToSupabase] Error:', error.message);
+      throw error;
+    }
+  }
+
+  localStorage.removeItem(LOCAL_DATA_KEY);
+  showToast(`Đã đồng bộ ${transactions.length} giao dịch lên Supabase.`, 'success');
 }
 
 async function getProfile(userId) {
