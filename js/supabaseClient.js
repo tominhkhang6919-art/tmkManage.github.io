@@ -6,15 +6,6 @@
  * các module khác (auth.js, dashboard.js) sử dụng.
  */
 
-// ── URL dự án Supabase ──────────────────────────────────────────
-const SUPABASE_URL = 'https://opwrgedhhaxonkgkxqkh.supabase.co';
-
-// ── Anon/Public key (an toàn để nhúng vào frontend) ────────────
-const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
-  'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wd3JnZWRoaGF4b25rZ2t4cWto' +
-  'Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIxNDEyMTYsImV4cCI6MjEwNzcx' +
-  'NzIxNn0.MdzonKnqQntXPXvh4thjbRx6UU5XHPNjJAACIIAbdgc';
 
 /**
  * Tạo Supabase client duy nhất cho toàn ứng dụng.
