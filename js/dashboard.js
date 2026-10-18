@@ -573,7 +573,7 @@ function resetForm(type) {
  * @param {string} id - UUID của giao dịch
  */
 function openEditModal(id) {
-  const t = State.transactions.find(tx => tx.id === id);
+  const t = State.transactions.find(tx => String(tx.id) === String(id));
   if (!t) return;
 
   State.editingId = id;
@@ -650,7 +650,7 @@ async function saveEdit() {
   }
 
   // Cập nhật State
-  const idx = State.transactions.findIndex(t => t.id === id);
+  const idx = State.transactions.findIndex(t => String(t.id) === String(id));
   if (idx !== -1) State.transactions[idx] = data;
 
   applyFiltersAndSort();
@@ -671,7 +671,7 @@ async function saveEdit() {
  * @param {string} id
  */
 function confirmDelete(id) {
-  const t = State.transactions.find(tx => tx.id === id);
+  const t = State.transactions.find(tx => String(tx.id) === String(id));
   if (!t) return;
 
   State.editingId = id;
@@ -713,7 +713,7 @@ async function deleteTransaction() {
   }
 
   // Xóa khỏi State
-  State.transactions = State.transactions.filter(t => t.id !== id);
+  State.transactions = State.transactions.filter(t => String(t.id) !== String(id));
   applyFiltersAndSort();
   renderBalance();
   renderSummary();
