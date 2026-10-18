@@ -135,6 +135,18 @@ function setLoading(btnEl, isLoading, text = '') {
   }
 }
 
+function createLocalStorageUser(localData, warningMessage) {
+  localStorageMode = true;
+  const fallbackData = localData || readLocalData();
+  if (!fallbackData.userId) {
+    fallbackData.userId = createLocalId();
+    writeLocalData(fallbackData);
+  }
+  console.warn('[Auth] Supabase is unavailable; using browser storage.');
+  showToast(warningMessage, 'warning');
+  return { id: fallbackData.userId, user_metadata: {} };
+}
+
 /**
  * Reuse the saved session, or create one anonymous Supabase account.
  * Supabase persists this session in localStorage, so the same browser
@@ -143,6 +155,15 @@ function setLoading(btnEl, isLoading, text = '') {
 async function getOrCreateSessionUser() {
   const savedLocalData = localStorage.getItem(LOCAL_DATA_KEY);
   const localData = savedLocalData ? readLocalData() : null;
+
+  if (!db) {
+    return createLocalStorageUser(
+      localData,
+      localData
+        ? 'Supabase chưa được cấu hình. Dữ liệu hiện có tiếp tục được lưu trên trình duyệt.'
+        : 'Supabase chưa được cấu hình. Dữ liệu sẽ chỉ được lưu trên trình duyệt.'
+    );
+  }
 
   const { data, error } = await db.auth.getSession();
   if (error) throw error;
@@ -156,20 +177,12 @@ async function getOrCreateSessionUser() {
         /anonymous sign-ins are disabled/i.test(signInError.message || '');
       if (!anonymousAuthDisabled) throw signInError;
 
-      localStorageMode = true;
-      const fallbackData = localData || readLocalData();
-      if (!fallbackData.userId) {
-        fallbackData.userId = createLocalId();
-        writeLocalData(fallbackData);
-      }
-      console.warn('[Auth] Anonymous Sign-Ins are disabled; using browser storage.');
-      showToast(
+      return createLocalStorageUser(
+        localData,
         localData
           ? 'Đang dùng dữ liệu chưa đồng bộ trên trình duyệt. Bật Anonymous Sign-Ins để chuyển dữ liệu lên Supabase.'
-          : 'Đang lưu dữ liệu trên trình duyệt. Bật Anonymous Sign-Ins trong Supabase để đồng bộ đám mây.',
-        'warning'
+          : 'Đang lưu dữ liệu trên trình duyệt. Bật Anonymous Sign-Ins trong Supabase để đồng bộ đám mây.'
       );
-      return { id: fallbackData.userId, user_metadata: {} };
     }
     user = anonymousData.user;
   }

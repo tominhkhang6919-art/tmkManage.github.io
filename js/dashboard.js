@@ -36,13 +36,6 @@ const State = {
 /* ══════════════════════════════════════════════════════════════
    PHẦN 1: KHỞI TẠO
    ══════════════════════════════════════════════════════════════ */
-const db = window.db;
-
-if (!db) {
-  throw new Error(
-    'db chưa được khởi tạo. Kiểm tra js/supabaseClient.js'
-  );
-}
 /**
  * init()
  * Điểm vào (entry point) của dashboard.
@@ -1137,23 +1130,23 @@ function renderAvatarWithValue(value) {
 
 // Hàm đặt lại giá trị và giữ đúng vị trí con trỏ
 function setAmountInputDigits(input, digits, digitsBeforeCaret) {
-  // Hàm formatNumberInput của bạn (mình để ví dụ mặc định định dạng 1,000,000)
-  const formatted = typeof formatNumberInput === 'function' 
-    ? formatNumberInput(digits) 
-    : digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    
+  const formatted = formatNumberInput(digits);
   input.value = formatted;
 
   let caret = 0;
   let digitsPassed = 0;
-  
-  // Tính toán lại vị trí con trỏ sau khi chuỗi đã được thêm các dấu phẩy
   while (caret < formatted.length && digitsPassed < digitsBeforeCaret) {
     if (/\d/.test(formatted[caret])) digitsPassed++;
     caret++;
   }
 
   input.setSelectionRange(caret, caret);
+}
+
+function replaceAmountInputDigits(input, start, end, insertedDigits = '') {
+  const digits = input.value.replace(/\D/g, '');
+  const updatedDigits = digits.slice(0, start) + insertedDigits + digits.slice(end);
+  setAmountInputDigits(input, updatedDigits, start + insertedDigits.length);
 }
 
 /**
@@ -1167,20 +1160,69 @@ function bindEvents() {
 
   // ── Format số tiền khi nhập ──
   document.querySelectorAll('.input-amount').forEach(inp => {
-  inp.addEventListener('input', function () {
-    // 1. Lấy vị trí con trỏ hiện tại ngay sau khi trình duyệt thay đổi value
-    const caret = this.selectionStart ?? this.value.length;
-    
-    // 2. Đếm số lượng chữ số nằm trước con trỏ
-    const digitsBeforeCaret = this.value.slice(0, caret).replace(/\D/g, '').length;
-    
-    // 3. Lấy toàn bộ chữ số có trong ô input
-    const digits = this.value.replace(/\D/g, '');
-    
-    // 4. Gọi hàm định dạng lại và khôi phục vị trí con trỏ
-    setAmountInputDigits(this, digits, digitsBeforeCaret);
+    inp.addEventListener('beforeinput', function (event) {
+      if (event.isComposing) return;
+
+      const inputType = event.inputType || '';
+      const isBackwardDelete = inputType === 'deleteContentBackward';
+      const isForwardDelete = inputType === 'deleteContentForward';
+      const isSelectionDelete = inputType === 'deleteByCut' || inputType === 'deleteContent';
+      const isInsertion = inputType === 'insertText';
+      if (!isBackwardDelete && !isForwardDelete && !isSelectionDelete && !isInsertion) return;
+
+      const value = this.value;
+      const selectionStart = this.selectionStart ?? value.length;
+      const selectionEnd = this.selectionEnd ?? selectionStart;
+      let start = value.slice(0, selectionStart).replace(/\D/g, '').length;
+      let end = value.slice(0, selectionEnd).replace(/\D/g, '').length;
+      let insertedDigits = '';
+
+      if (isInsertion) {
+        insertedDigits = (event.data || '').replace(/\D/g, '');
+        if (!insertedDigits) {
+          event.preventDefault();
+          return;
+        }
+      } else if (selectionStart === selectionEnd && isBackwardDelete) {
+        if (start === 0) {
+          event.preventDefault();
+          return;
+        }
+        start--;
+      } else if (selectionStart === selectionEnd && isForwardDelete) {
+        if (end >= value.replace(/\D/g, '').length) {
+          event.preventDefault();
+          return;
+        }
+        end++;
+      }
+
+      event.preventDefault();
+      replaceAmountInputDigits(this, start, end, insertedDigits);
+    });
+
+    inp.addEventListener('paste', function (event) {
+      event.preventDefault();
+      const pastedDigits = event.clipboardData?.getData('text')?.replace(/\D/g, '') || '';
+      const selectionStart = this.selectionStart ?? this.value.length;
+      const selectionEnd = this.selectionEnd ?? selectionStart;
+      const start = this.value.slice(0, selectionStart).replace(/\D/g, '').length;
+      const end = this.value.slice(0, selectionEnd).replace(/\D/g, '').length;
+      if (pastedDigits) replaceAmountInputDigits(this, start, end, pastedDigits);
+    });
+
+    const normalizeInput = function () {
+      const caret = this.selectionStart ?? this.value.length;
+      const digitsBeforeCaret = this.value.slice(0, caret).replace(/\D/g, '').length;
+      const digits = this.value.replace(/\D/g, '');
+      setAmountInputDigits(this, digits, digitsBeforeCaret);
+    };
+
+    inp.addEventListener('input', function (event) {
+      if (!event.isComposing) normalizeInput.call(this);
+    });
+    inp.addEventListener('compositionend', normalizeInput);
   });
-});
 
   // ── Tự điền ngày hôm nay ──
   document.querySelectorAll('.input-date').forEach(inp => {

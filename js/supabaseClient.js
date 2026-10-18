@@ -17,14 +17,15 @@
  *  - detectSessionInUrl: true → xử lý OAuth redirect (Google / GitHub)
  */
 
-if (!window.supabase) {
-  throw new Error(
-    'Không tải được thư viện Supabase. Hãy kiểm tra CDN.'
-  );
+const SUPABASE_URL = window.SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
+const supabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+
+if (supabaseConfigured && !window.supabase) {
+  throw new Error('Không tải được thư viện Supabase. Hãy kiểm tra CDN.');
 }
 
-// Tạo một Supabase client dùng chung cho toàn ứng dụng
-if (!window.db) {
+if (supabaseConfigured && !window.db) {
   window.db = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_ANON_KEY,
@@ -42,14 +43,11 @@ if (!window.db) {
   );
 }
 
-// Giữ biến db để những đoạn code trong file này tiếp tục sử dụng được
-const db = window.db;
+const db = window.db || null;
 
-
-/* ── Kiểm tra kết nối (debug) ──────────────────────────────────
-   Ghi log khi môi trường là development.
-   Không ảnh hưởng đến production.                              */
-if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+if (!supabaseConfigured) {
+  console.warn('[SupabaseClient] Supabase is not configured; browser storage will be used.');
+} else if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
   console.info('[SupabaseClient] Connected to:', SUPABASE_URL);
 }
 

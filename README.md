@@ -21,11 +21,11 @@ Manage_money/
 
 1. Trong Supabase, mở **SQL Editor**, chạy toàn bộ `supabase_schema.sql` để tạo các bảng và chính sách RLS. Có thể chạy lại script an toàn khi dự án đã có một phần schema; script bổ sung các cột còn thiếu trên `transactions`, gồm `local_id` để đồng bộ lặp an toàn, gỡ ràng buộc bắt buộc của cột `description` cũ nếu có, và giữ lại dữ liệu hiện có.
 2. Vào **Authentication → Sign In / Providers** và bật **Anonymous Sign-Ins**. Ứng dụng cần nhà cung cấp này để tự tạo phiên an toàn mà không hiện màn hình đăng nhập.
-3. Mở **Project Settings → API** và xác nhận URL cùng anon/public key trong `js/supabaseClient.js` khớp với dự án.
+3. Mở **Project Settings → API** và cấu hình `window.SUPABASE_URL` cùng `window.SUPABASE_ANON_KEY` trước khi tải `js/supabaseClient.js` trong `dashboard.html`. Chỉ dùng anon/publishable key ở trình duyệt; tuyệt đối không dùng service-role key.
 
 Giao dịch và hồ sơ được lưu trên Supabase theo phiên người dùng, với RLS chỉ cho phép phiên đó truy cập dữ liệu của chính nó. Phiên được lưu trong trình duyệt để những lần mở sau tiếp tục dùng cùng dữ liệu.
 
-Nếu Supabase báo Anonymous Sign-Ins đang tắt, ứng dụng tự chuyển sang lưu cục bộ bằng `localStorage` và hiển thị thông báo; dữ liệu chưa được đồng bộ lên đám mây trong thời gian này. Khi bật Anonymous Sign-Ins và mở lại ứng dụng, dữ liệu cục bộ sẽ tự được chuyển lên phiên Supabase hiện tại. Việc chuyển dùng ID cục bộ duy nhất để có thể thử lại an toàn nếu quá trình đồng bộ bị gián đoạn; chỉ xóa bản cục bộ sau khi tất cả giao dịch đã được Supabase xác nhận. Nếu việc đồng bộ thất bại, ứng dụng báo lỗi và giữ nguyên dữ liệu cục bộ.
+Nếu chưa cấu hình Supabase hoặc Supabase báo Anonymous Sign-Ins đang tắt, ứng dụng tự chuyển sang lưu cục bộ bằng `localStorage` và hiển thị thông báo; dữ liệu chưa được đồng bộ lên đám mây trong thời gian này. Khi bật Anonymous Sign-Ins và mở lại ứng dụng, dữ liệu cục bộ sẽ tự được chuyển lên phiên Supabase hiện tại. Việc chuyển dùng ID cục bộ duy nhất để có thể thử lại an toàn nếu quá trình đồng bộ bị gián đoạn; chỉ xóa bản cục bộ sau khi tất cả giao dịch đã được Supabase xác nhận. Nếu việc đồng bộ thất bại, ứng dụng báo lỗi và giữ nguyên dữ liệu cục bộ.
 
 > Phiên ẩn danh gắn với trình duyệt/thiết bị hiện tại. Nếu xóa dữ liệu trang web hoặc dùng trình duyệt/thiết bị khác, ứng dụng không thể khôi phục phiên cũ; dữ liệu vẫn nằm trên Supabase nhưng sẽ không thể truy cập từ phiên mới.
 
